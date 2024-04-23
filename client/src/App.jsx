@@ -4,14 +4,15 @@ import { Container, TextField, Typography, Button, Stack, Grid } from '@mui/mate
 import "./app.css"
 
 const App = () => {
-  const socket = useMemo(() => io('http://localhost:5000', {withCredentials: true}), []);
+  const socket = useMemo(() => io('http://localhost:5000', { withCredentials: true }), []);
 
-  // State variables for message, room, socket ID, and messages
+  // State variables for message, room, socket ID, messages, and connected users
   const [message, setMessage] = useState('');
   const [room, setRoom] = useState('');
   const [roomName, setRoomName] = useState('');
   const [socketId, setSocketId] = useState('');
   const [allMessages, setAllMessages] = useState([]);
+  const [connectedUsers, setConnectedUsers] = useState({}); // Track connected users per room
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -25,9 +26,9 @@ const App = () => {
     }
   };
 
-  const joinRoomHandler=(e) =>{
+  const joinRoomHandler = (e) => {
     e.preventDefault();
-    socket.emit("join-room", roomName); 
+    socket.emit("join-room", roomName);
     setRoomName("");
   }
 
@@ -35,6 +36,21 @@ const App = () => {
     socket.on('connect', () => {
       setSocketId(socket.id);
       console.log('Connected:', socket.id);
+    });
+
+    socket.on('user-connected', (message) => {
+      const room = message.split(' ')[3]; // Extract room name from message
+      setAllMessages((prevMessages) => [...prevMessages, message]);
+
+      // Update connected users in the specific room
+      setConnectedUsers((prevUsers) => {
+        const updatedUsers = { ...prevUsers };
+        if (!updatedUsers[room]) {
+          updatedUsers[room] = [];
+        }
+        updatedUsers[room].push(message.split(' ')[1]); // Extract username from message
+        return updatedUsers;
+      });
     });
 
     // Update allMessages state to display received messages
@@ -54,13 +70,13 @@ const App = () => {
 
   return (
     <Container maxWidth="sm">
-      <Typography variant="h3" component="div" gutterBottom style={{marginTop:"150px", color:"white", fontWeight:"bold"}}>
+      <Typography variant="h3" component="div" gutterBottom style={{ marginTop: "150px", color: "white", fontWeight: "bold" }}>
         The Websocket Room!
       </Typography>
 
       <Grid container spacing={2} justifyContent="center">
         <Grid item xs={12}>
-          <Typography variant="h5" component="div" gutterBottom style={{color:"white", fontWeight:"bold"}}>
+          <Typography variant="h5" component="div" gutterBottom style={{ color: "white", fontWeight: "bold" }}>
             Join Room
           </Typography>
         </Grid>
@@ -83,7 +99,7 @@ const App = () => {
           />
         </Grid>
         <Grid item xs={4}>
-          <Button type="submit" variant="contained" color="primary" fullWidth onClick={joinRoomHandler} style={{height:"99%"}}>
+          <Button type="submit" variant="contained" color="primary" fullWidth onClick={joinRoomHandler} style={{ height: "99%" }}>
             Join
           </Button>
         </Grid>
@@ -93,61 +109,65 @@ const App = () => {
 
       <form onSubmit={handleSubmit}>
         <Grid container spacing={2}>
-        <Grid item xs={5}>
-  <TextField
-    value={message}
-    onChange={(e) => setMessage(e.target.value)}
-    id="outlined-basic"
-    label="Message"
-    variant="outlined"
-    style={{ width: "110%" }}
-    sx={{
-      backgroundColor: "white",
-      "& .MuiOutlinedInput-root": {
-        "& fieldset": {
-          borderColor: "white",
-        },
-      },
-    }}
-  />
-</Grid>
-<Grid item xs={5}>
-  <TextField
-    value={room}
-    onChange={(e) => setRoom(e.target.value)}
-    id="outlined-basic"
-    label="Room"
-    variant="outlined"
-    style={{ width: "100%", marginLeft: "15px" }} // Add margin-left here
-    sx={{
-      backgroundColor: "white",
-      "& .MuiOutlinedInput-root": {
-        "& fieldset": {
-          borderColor: "white",
-        },
-      },
-    }}
-  />
-</Grid>
+          <Grid item xs={5}>
+            <TextField
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              id="outlined-basic"
+              label="Message"
+              variant="outlined"
+              style={{ width: "110%" }}
+              sx={{
+                backgroundColor: "white",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: "white",
+                  },
+                },
+              }}
+            />
+          </Grid>
+          <Grid item xs={5}>
+            <TextField
+              value={room}
+              onChange={(e) => setRoom(e.target.value)}
+              id="outlined-basic"
+              label="Room"
+              variant="outlined"
+              style={{ width: "100%", marginLeft: "15px" }} // Add margin-left here
+              sx={{
+                backgroundColor: "white",
+                "& .MuiOutlinedInput-root": {
+                  "& fieldset": {
+                    borderColor: "white",
+                  },
+                },
+              }}
+            />
+          </Grid>
           <Grid item xs={1}>
-            <Button type="submit" variant="contained" color="primary" fullWidth style={{height:"99%", marginLeft:"15px"}}>
+            <Button type="submit" variant="contained" color="primary" fullWidth style={{ height: "99%", marginLeft: "15px" }}>
               Send
             </Button>
           </Grid>
         </Grid>
       </form>
-
+    
       <br />
-
+    
       <Stack>
         {allMessages.map((m, i) => (
-          <Typography key={i} variant="h6" component="div" gutterBottom style={{color:"white"}}>
+          <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
             {m}
+            {/* Only display if user is not already connected in the room */}
+            {m.includes('has joined') && !connectedUsers[m.split(' ')[3]]?.includes(m.split(' ')[1]) && (
+              <span style={{ color: "gray", fontSize: "12px" }}> (New)</span>
+            )}
           </Typography>
         ))}
       </Stack>
     </Container>
-  );
-};
-
-export default App;
+    );
+    };
+    
+    export default App;
