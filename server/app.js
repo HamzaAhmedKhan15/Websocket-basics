@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+import { sign } from 'crypto';
 
 const port = 5000;
 const secretKey = 'tommarvoloriddle';
@@ -30,7 +31,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/login", (req, res) => {
-  const token = sign({ _id: "jdkalhfhvkfuwkjf" }, secretKey);
+  const token = jwt.sign({ _id: "jdkalhfhvkfuwkjf" }, secretKey);
 
   res.cookie("token", token, { httpOnly: true, secure: true, sameSite: "none" }).json({
     message: "Login Success",

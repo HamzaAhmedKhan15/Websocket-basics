@@ -167,7 +167,7 @@ const App = () => {
         ))}
       </Stack>
     </Container>
-    );
-    };
-    
-    export default App;
+  );
+};
+
+export default App;
