@@ -70,15 +70,16 @@ const App = () => {
   }, []);
 
   return (
-    <Container maxWidth="sm">
-      <Typography variant="h3" component="div" gutterBottom style={{ marginTop: "150px", color: "white", fontWeight: "bold" }}>
-        The Websocket Room!
+    
+    <Container maxWidth="sm" className='live'>
+      <Typography variant="h3" component="div" gutterBottom style={{ marginTop: "150px", color: "orange", fontWeight: "700", fontFamily:"Platypi", fontStyle:"normal" }} className='playti'>
+        Socket' ChatRooms!
       </Typography>
 
       <Grid container spacing={2} justifyContent="center">
         <Grid item xs={12}>
-          <Typography variant="h5" component="div" gutterBottom style={{ color: "white", fontWeight: "bold" }}>
-            Join Room
+          <Typography variant="h5" component="div" gutterBottom style={{ color: "white", fontWeight: "bold", fontStyle:"italic" }}>
+            Let's Join & Chat.
           </Typography>
         </Grid>
         <Grid item xs={8}>
@@ -86,7 +87,7 @@ const App = () => {
             value={roomName}
             onChange={(e) => setRoomName(e.target.value)}
             id="outlined-basic"
-            label="Room Name"
+            label="Join Room"
             variant="outlined"
             fullWidth
             sx={{
@@ -100,7 +101,7 @@ const App = () => {
           />
         </Grid>
         <Grid item xs={4}>
-          <Button type="submit" variant="contained" color="primary" fullWidth onClick={joinRoomHandler} style={{ height: "99%" }}>
+          <Button type="submit" variant="contained" fullWidth onClick={joinRoomHandler} style={{ height: "99%", background:"#36454F" }}>
             Join
           </Button>
         </Grid>
@@ -133,7 +134,7 @@ const App = () => {
               value={room}
               onChange={(e) => setRoom(e.target.value)}
               id="outlined-basic"
-              label="Room"
+              label="Room Name"
               variant="outlined"
               style={{ width: "100%", marginLeft: "15px" }} // Add margin-left here
               sx={{
@@ -147,7 +148,7 @@ const App = () => {
             />
           </Grid>
           <Grid item xs={1}>
-            <Button type="submit" variant="contained" color="primary" fullWidth style={{ height: "99%", marginLeft: "15px" }}>
+            <Button type="submit" variant="contained" className='btnd' fullWidth style={{ height: "99%", marginLeft: "15px", background:"#36454F" }}>
               Send
             </Button>
           </Grid>
