@@ -64,15 +64,17 @@ io.on("connection", (socket) => {
 
     // Add user to connected users list for the room
     connectedUsers[room] = connectedUsers[room] || [];
-    connectedUsers[room].push(socket.id);
+    connectedUsers[room].push({ id: socket.id, username: `User ${userCount}` });
 
     io.to(room).emit('user-connected', `User ${userCount} has joined the chat`, room);
   });
 
   socket.on("message", ({ room, message }) => {
     console.log({ room, message });
-    if (connectedUsers[room]?.includes(socket.id)) {
-      socket.to(room).emit("message received", message);
+    const user = connectedUsers[room].find(u => u.id === socket.id);
+    if (user) {
+      const messageWithUser = `${user.username}: ${message}`;
+      socket.to(room).emit("message received", messageWithUser);
     }
   });
 
@@ -81,7 +83,7 @@ io.on("connection", (socket) => {
 
     // Remove user from connected users list for the room
     for (const room in connectedUsers) {
-      const roomIndex = connectedUsers[room].findIndex(id => id === socket.id);
+      const roomIndex = connectedUsers[room].findIndex(u => u.id === socket.id);
       if (roomIndex !== -1) {
         connectedUsers[room].splice(roomIndex, 1);
       }

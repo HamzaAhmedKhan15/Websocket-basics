@@ -169,6 +169,12 @@ const App = () => {
                 </Typography>
               );
             }
+          } else if (m.includes(':')) {
+            return (
+              <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white" }}>
+                {m}
+              </Typography>
+            );
           }
           return (
             <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
