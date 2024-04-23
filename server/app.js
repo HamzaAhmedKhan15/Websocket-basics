@@ -4,7 +4,6 @@ import { createServer } from 'http';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
-import { sign } from 'crypto';
 
 const port = 5000;
 const secretKey = 'tommarvoloriddle';
@@ -58,7 +57,6 @@ io.use((socket, next) => {
 io.on("connection", (socket) => {
   userCount++;
   console.log(`User ${userCount} Connected`, socket.id);
-  io.emit('user-connected', `User ${userCount} has joined the chat`);
 
   socket.on("join-room", (room) => {
     socket.join(room);
@@ -67,21 +65,25 @@ io.on("connection", (socket) => {
     // Add user to connected users list for the room
     connectedUsers[room] = connectedUsers[room] || [];
     connectedUsers[room].push(socket.id);
+
+    io.to(room).emit('user-connected', `User ${userCount} has joined the chat`, room);
   });
 
   socket.on("message", ({ room, message }) => {
     console.log({ room, message });
-    socket.to(room).emit("message received", message);
+    if (connectedUsers[room]?.includes(socket.id)) {
+      socket.to(room).emit("message received", message);
+    }
   });
 
   socket.on("disconnect", () => {
     console.log(`User ${userCount} disconnected`, socket.id);
 
     // Remove user from connected users list for the room
-    if (connectedUsers[socket.id]) {
-      const roomIndex = connectedUsers[socket.id].findIndex(id => id === socket.id);
+    for (const room in connectedUsers) {
+      const roomIndex = connectedUsers[room].findIndex(id => id === socket.id);
       if (roomIndex !== -1) {
-        connectedUsers[socket.id].splice(roomIndex, 1);
+        connectedUsers[room].splice(roomIndex, 1);
       }
     }
   });

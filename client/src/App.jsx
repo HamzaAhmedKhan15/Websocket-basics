@@ -13,16 +13,17 @@ const App = () => {
   const [socketId, setSocketId] = useState('');
   const [allMessages, setAllMessages] = useState([]);
   const [connectedUsers, setConnectedUsers] = useState({}); // Track connected users per room
+  const [roomJoined, setRoomJoined] = useState(false);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     // Ensure both message and room are not empty before sending
-    if (message.trim() && room.trim()) {
+    if (message.trim() && room.trim() && roomJoined) {
       socket.emit('message', { message, room });
       setMessage(''); // Clear message input after sending
     } else {
-      alert('Please enter a message and room name!');
+      alert('Please join the room first or enter a message and room name!');
     }
   };
 
@@ -30,6 +31,7 @@ const App = () => {
     e.preventDefault();
     socket.emit("join-room", roomName);
     setRoomName("");
+    setRoomJoined(true);
   }
 
   useEffect(() => {
@@ -38,17 +40,16 @@ const App = () => {
       console.log('Connected:', socket.id);
     });
 
-    socket.on('user-connected', (message) => {
-      const room = message.split(' ')[3]; // Extract room name from message
+    socket.on('user-connected', (message, joinedRoom) => {
       setAllMessages((prevMessages) => [...prevMessages, message]);
 
       // Update connected users in the specific room
       setConnectedUsers((prevUsers) => {
         const updatedUsers = { ...prevUsers };
-        if (!updatedUsers[room]) {
-          updatedUsers[room] = [];
+        if (!updatedUsers[joinedRoom]) {
+          updatedUsers[joinedRoom] = [];
         }
-        updatedUsers[room].push(message.split(' ')[1]); // Extract username from message
+        updatedUsers[joinedRoom].push(message.split(' ')[1]); // Extract username from message
         return updatedUsers;
       });
     });
@@ -156,15 +157,25 @@ const App = () => {
       <br />
     
       <Stack>
-        {allMessages.map((m, i) => (
-          <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
-            {m}
-            {/* Only display if user is not already connected in the room */}
-            {m.includes('has joined') && !connectedUsers[m.split(' ')[3]]?.includes(m.split(' ')[1]) && (
-              <span style={{ color: "gray", fontSize: "12px" }}> (New)</span>
-            )}
-          </Typography>
-        ))}
+        {allMessages.map((m, i) => {
+          if (m.includes('has joined')) {
+            const user = m.split(' ')[1];
+            const joinedRoom = m.split(' ')[3];
+            const isNewUser = !connectedUsers[joinedRoom]?.includes(user);
+            if (isNewUser) {
+              return (
+                <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
+                  {m} <span style={{ color: "gray", fontSize: "12px" }}> (New)</span>
+                </Typography>
+              );
+            }
+          }
+          return (
+            <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
+              {m}
+            </Typography>
+          );
+        })}
       </Stack>
     </Container>
   );
