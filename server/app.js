@@ -39,6 +39,7 @@ app.get("/login", (req, res) => {
 
 let userCount = 0;
 let connectedUsers = {}; // Track connected users per room
+let messages = {}; // Track messages per room
 
 io.use((socket, next) => {
   cookieParser()(socket.request, socket.request.res, (err) => {
@@ -66,15 +67,26 @@ io.on("connection", (socket) => {
     connectedUsers[room] = connectedUsers[room] || [];
     connectedUsers[room].push({ id: socket.id, username: `User ${userCount}` });
 
+    // Send all previous messages of the room to the joining user
+    if (messages[room]) {
+      for (const msg of messages[room]) {
+        socket.emit("message received", msg);
+      }
+    }
+
     io.to(room).emit('user-connected', `User ${userCount} has joined the chat`, room);
   });
 
   socket.on("message", ({ room, message }) => {
     console.log({ room, message });
-    const user = connectedUsers[room].find(u => u.id === socket.id);
-    if (user) {
-      const messageWithUser = `${user.username}: ${message}`;
-      socket.to(room).emit("message received", messageWithUser);
+    if (connectedUsers[room]) {
+      const user = connectedUsers[room].find(u => u.id === socket.id);
+      if (user) {
+        const messageWithUser = `${user.username}: ${message}`;
+        socket.to(room).emit("message received", messageWithUser);
+        messages[room] = messages[room] || [];
+        messages[room].push(messageWithUser);
+      }
     }
   });
 

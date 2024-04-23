@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { io } from 'socket.io-client';
-import { Container, TextField, Typography, Button, Stack, Grid } from '@mui/material';
+import { Container, TextField, Typography, Button, Stack, Grid, Paper } from '@mui/material';
 import "./app.css"
 
 const App = () => {
@@ -70,9 +70,8 @@ const App = () => {
   }, []);
 
   return (
-    
-    <Container maxWidth="sm" className='live'>
-      <Typography variant="h3" component="div" gutterBottom style={{ marginTop: "150px", color: "orange", fontWeight: "700", fontFamily:"Platypi", fontStyle:"normal" }} className='playti'>
+    <Container maxWidth="sm">
+       <Typography variant="h3" component="div" gutterBottom style={{ marginTop: "150px", color: "orange", fontWeight: "700", fontFamily:"Platypi", fontStyle:"normal" }} className='playti'>
         Socket' ChatRooms!
       </Typography>
 
@@ -101,7 +100,7 @@ const App = () => {
           />
         </Grid>
         <Grid item xs={4}>
-          <Button type="submit" variant="contained" fullWidth onClick={joinRoomHandler} style={{ height: "99%", background:"#36454F" }}>
+          <Button type="submit" variant="contained" color="primary" fullWidth onClick={joinRoomHandler} style={{ height: "99%", background:"#181818", paddingRight:"5px" }}>
             Join
           </Button>
         </Grid>
@@ -148,7 +147,7 @@ const App = () => {
             />
           </Grid>
           <Grid item xs={1}>
-            <Button type="submit" variant="contained" className='btnd' fullWidth style={{ height: "99%", marginLeft: "15px", background:"#36454F" }}>
+            <Button type="submit" variant="contained" color="primary" fullWidth style={{ height: "99%", marginLeft: "15px" , background:"#181818"}}>
               Send
             </Button>
           </Grid>
@@ -157,7 +156,7 @@ const App = () => {
     
       <br />
     
-      <Stack>
+      <Paper style={{ padding: "10px", backgroundColor: "rgba(0, 0, 0, 0.7)", overflowY: "auto", maxHeight: "300px" }}>
         {allMessages.map((m, i) => {
           if (m.includes('has joined')) {
             const user = m.split(' ')[1];
@@ -183,7 +182,7 @@ const App = () => {
             </Typography>
           );
         })}
-      </Stack>
+      </Paper>
     </Container>
   );
 };
