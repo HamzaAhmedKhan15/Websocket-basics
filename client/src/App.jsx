@@ -1,188 +1,245 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { io } from 'socket.io-client';
-import { Container, TextField, Typography, Button, Stack, Grid, Paper } from '@mui/material';
+import { Container, TextField, Typography, Button, Grid, Paper } from '@mui/material';
 import "./app.css"
 
 const App = () => {
-  const socket = useMemo(() => io('http://localhost:5000', { withCredentials: true }), []);
+  const [socket, setSocket] = useState(null);
+  const [currentUser, setCurrentUser] = useState(""); // Track current user ID
 
-  // State variables for message, room, socket ID, messages, and connected users
   const [message, setMessage] = useState('');
-  const [room, setRoom] = useState('');
   const [roomName, setRoomName] = useState('');
-  const [socketId, setSocketId] = useState('');
   const [allMessages, setAllMessages] = useState([]);
-  const [connectedUsers, setConnectedUsers] = useState({}); // Track connected users per room
+  const [connectedUsers, setConnectedUsers] = useState({});
   const [roomJoined, setRoomJoined] = useState(false);
+  const [currentRoom, setCurrentRoom] = useState('');
+  const [roomOwner, setRoomOwner] = useState('');
+  const messagesEndRef = useRef(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
-
-    // Ensure both message and room are not empty before sending
-    if (message.trim() && room.trim() && roomJoined) {
-      socket.emit('message', { message, room });
-      setMessage(''); // Clear message input after sending
+    if (message.trim() && roomJoined) {
+      socket.emit('message', { message, room: currentRoom });
+      setMessage('');
     } else {
-      alert('Please join the room first or enter a message and room name!');
+      alert('Please join the room first to send messages!');
+    }
+  };
+
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSubmit(e);
+    } else if (e.key === 'Enter' && e.shiftKey) {
+      e.preventDefault();
+      setMessage(message + '\n');
     }
   };
 
   const joinRoomHandler = (e) => {
     e.preventDefault();
-    socket.emit("join-room", roomName);
-    setRoomName("");
+    const username = document.getElementById("username").value.trim();
+    
+    if (!username) {
+      alert('Please enter a username.');
+      return;
+    }
+  
+    socket.emit("join-room", { room: roomName, username });
+    setCurrentRoom(roomName);
+    setRoomOwner(username);
     setRoomJoined(true);
-  }
+  };
 
   useEffect(() => {
-    socket.on('connect', () => {
-      setSocketId(socket.id);
-      console.log('Connected:', socket.id);
+    const newSocket = io('http://localhost:5000', { withCredentials: true });
+    setSocket(newSocket);
+
+    newSocket.on('connect', () => {
+      console.log('Connected:', newSocket.id);
+      setCurrentUser(newSocket.id); // Set current user ID on connect
     });
 
-    socket.on('user-connected', (message, joinedRoom) => {
+    newSocket.on('user-connected', (message, joinedRoom) => {
       setAllMessages((prevMessages) => [...prevMessages, message]);
-
-      // Update connected users in the specific room
       setConnectedUsers((prevUsers) => {
         const updatedUsers = { ...prevUsers };
         if (!updatedUsers[joinedRoom]) {
           updatedUsers[joinedRoom] = [];
         }
-        updatedUsers[joinedRoom].push(message.split(' ')[1]); // Extract username from message
+        updatedUsers[joinedRoom].push(message.split(' ')[1]);
         return updatedUsers;
       });
     });
 
-    // Update allMessages state to display received messages
-    socket.on('message received', (data) => {
+    newSocket.on('message received', (data) => {
       setAllMessages((prevMessages) => [...prevMessages, data]);
+      scrollToBottom();
     });
 
-    // Handle potential 'Welcome' event from the server (optional)
-    socket.on('Welcome', (e) => {
-      console.log(e);
+    newSocket.on('room-joined', ({ room, owner }) => {
+      setCurrentRoom(room);
+      setRoomOwner(owner);
     });
 
     return () => {
-      socket.disconnect(); // Clean up on unmount
+      newSocket.disconnect();
     };
   }, []);
 
-  return (
-    <Container maxWidth="sm">
-       <Typography variant="h3" component="div" gutterBottom style={{ marginTop: "150px", color: "orange", fontWeight: "700", fontFamily:"Platypi", fontStyle:"normal" }} className='playti'>
-        Socket' ChatRooms!
-      </Typography>
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-      <Grid container spacing={2} justifyContent="center">
-        <Grid item xs={12}>
-          <Typography variant="h5" component="div" gutterBottom style={{ color: "white", fontWeight: "bold", fontStyle:"italic" }}>
+  const formatMessage = (msg) => {
+    const messageParts = msg.split(':');
+    const username = messageParts[0];
+    const content = messageParts.slice(1).join(':').trim();
+    const timestamp = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+  
+    return (
+      <div>
+        <Typography variant="h6" gutterBottom style={{ color: "white", textAlign: "left" }}>
+          <span style={{ color: "grey" }}>{`${username}:`}</span> {content}
+          <span style={{ color: "grey", fontSize: "12px", marginLeft: "5px" }}>{` - ${timestamp}`}</span>
+        </Typography>
+      </div>
+    );
+  };
+
+  return (
+    <Container maxWidth="lg">
+      <Grid container spacing={4}>
+        <Grid item xs={6}>
+          <Typography variant="h3" gutterBottom style={{ color: "orange", fontWeight: "700", fontFamily: "Platypi", fontStyle: "normal", marginTop:"150px" }} className='playti'>
+            Socket' ChatRooms!
+          </Typography>
+
+          <Typography variant="h5" gutterBottom style={{ color: "white", fontWeight: "bold", fontStyle: "italic" }}>
             Let's Join & Chat.
           </Typography>
+
+          {roomJoined ? (
+            <form onSubmit={handleSubmit}>
+              <Grid container spacing={2}>
+                <Grid item xs={12}>
+                  <TextField
+                    id="message"
+                    value={message}
+                    onChange={(e) => setMessage(e.target.value)}
+                    onKeyPress={handleKeyPress} // Handle Enter key press
+                    label="Message"
+                    variant="outlined"
+                    multiline
+                    rows={4} // Adjust the number of rows here
+                    maxRows={8} // Adjust the maximum number of rows here
+                    style={{ width: "100%" }}
+                    sx={{
+                      backgroundColor: "white",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "white",
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button type="submit" variant="contained" color="primary" fullWidth style={{background:"#181818"}}>
+                    Send
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          ) : (
+            <form onSubmit={joinRoomHandler}>
+              <Grid container spacing={2}>
+                <Grid item xs={6}>
+                  <TextField
+                    id="roomName"
+                    value={roomName}
+                    onChange={(e) => setRoomName(e.target.value)}
+                    label="Join New Room"
+                    variant="outlined"
+                    style={{ width: "100%" }}
+                    sx={{
+                      backgroundColor: "white",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "white",
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={6}>
+                  <TextField
+                    id="username"
+                    label="Join as (e.g. John)"
+                    variant="outlined"
+                    style={{ width: "100%" }}
+                    sx={{
+                      backgroundColor: "white",
+                      "& .MuiOutlinedInput-root": {
+                        "& fieldset": {
+                          borderColor: "white",
+                        },
+                      },
+                    }}
+                  />
+                </Grid>
+                <Grid item xs={12}>
+                  <Button type="submit" variant="contained" color="primary" fullWidth style={{background:"#181818"}}>
+                    Join
+                  </Button>
+                </Grid>
+              </Grid>
+            </form>
+          )}
         </Grid>
-        <Grid item xs={8}>
-          <TextField
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-            id="outlined-basic"
-            label="Join Room"
-            variant="outlined"
-            fullWidth
-            sx={{
-              backgroundColor: "white",
-              "& .MuiOutlinedInput-root": {
-                "& fieldset": {
-                  borderColor: "white",
-                },
-              },
-            }}
-          />
-        </Grid>
-        <Grid item xs={4}>
-          <Button type="submit" variant="contained" color="primary" fullWidth onClick={joinRoomHandler} style={{ height: "99%", background:"#181818", paddingRight:"5px" }}>
-            Join
-          </Button>
+        <Grid item xs={6}>
+          <Paper style={{ padding: "10px", backgroundColor: "rgba(0, 0, 0, 0.7)", maxHeight: "500px", scrollbarColor: "black", marginTop:"70px" }}>
+            {roomJoined && (
+              <div style={{ textAlign: "center",fontFamily: "Platypi" }}>
+                <Typography variant="h5" gutterBottom style={{ color: "white", fontWeight: "bold" }}>
+                  <span style={{ color: "orange" }}>ROOM:</span> {currentRoom}
+                </Typography>
+                <Typography variant="subtitle1" gutterBottom style={{ color: "grey", marginTop: "-5px", fontSize:"12px" , fontStyle: "italic"}}>
+                  created by {roomOwner} ({new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })})
+                  <hr />
+                </Typography>
+              </div>
+            )}
+            <div style={{ maxHeight: "400px", overflowY: "auto" }}>
+              {allMessages.map((m, i) => {
+                const isCurrentUserMessage = m.includes(currentUser); // Check if message is sent by current user
+                if (m.includes('has joined')) {
+                  const user = m.split(' ')[1];
+                  const joinedRoom = m.split(' ')[3];
+                  const isNewUser = !connectedUsers[joinedRoom]?.includes(user);
+                  if (isNewUser) {
+                    return (
+                      <Typography key={i} variant="subtitle1" gutterBottom style={{ color: "white", fontSize: "13px", ...(m.includes('has joined') && { color: "#1F51FF" }) }}>
+                        {m} <span style={{ color: "gray", fontSize: "10px" }}> (New)</span>
+                      </Typography>
+                    );
+                  }
+                } else if (m.includes(':')) {
+                  return (
+                    formatMessage(m)
+                  );
+                }
+                return (
+                  <Typography key={i} variant="h6" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
+                    {m}
+                  </Typography>
+                );
+              })}
+              <div ref={messagesEndRef} />
+            </div>
+          </Paper>
         </Grid>
       </Grid>
-
-      <br />
-
-      <form onSubmit={handleSubmit}>
-        <Grid container spacing={2}>
-          <Grid item xs={5}>
-            <TextField
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              id="outlined-basic"
-              label="Message"
-              variant="outlined"
-              style={{ width: "110%" }}
-              sx={{
-                backgroundColor: "white",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "white",
-                  },
-                },
-              }}
-            />
-          </Grid>
-          <Grid item xs={5}>
-            <TextField
-              value={room}
-              onChange={(e) => setRoom(e.target.value)}
-              id="outlined-basic"
-              label="Room Name"
-              variant="outlined"
-              style={{ width: "100%", marginLeft: "15px" }} // Add margin-left here
-              sx={{
-                backgroundColor: "white",
-                "& .MuiOutlinedInput-root": {
-                  "& fieldset": {
-                    borderColor: "white",
-                  },
-                },
-              }}
-            />
-          </Grid>
-          <Grid item xs={1}>
-            <Button type="submit" variant="contained" color="primary" fullWidth style={{ height: "99%", marginLeft: "15px" , background:"#181818"}}>
-              Send
-            </Button>
-          </Grid>
-        </Grid>
-      </form>
-    
-      <br />
-    
-      <Paper style={{ padding: "10px", backgroundColor: "rgba(0, 0, 0, 0.7)", overflowY: "auto", maxHeight: "300px" }}>
-        {allMessages.map((m, i) => {
-          if (m.includes('has joined')) {
-            const user = m.split(' ')[1];
-            const joinedRoom = m.split(' ')[3];
-            const isNewUser = !connectedUsers[joinedRoom]?.includes(user);
-            if (isNewUser) {
-              return (
-                <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
-                  {m} <span style={{ color: "gray", fontSize: "12px" }}> (New)</span>
-                </Typography>
-              );
-            }
-          } else if (m.includes(':')) {
-            return (
-              <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white" }}>
-                {m}
-              </Typography>
-            );
-          }
-          return (
-            <Typography key={i} variant="h6" component="div" gutterBottom style={{ color: "white", ...(m.includes('has joined') && { color: "green" }) }}>
-              {m}
-            </Typography>
-          );
-        })}
-      </Paper>
     </Container>
   );
 };

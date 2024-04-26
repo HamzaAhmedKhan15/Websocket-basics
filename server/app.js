@@ -40,6 +40,7 @@ app.get("/login", (req, res) => {
 let userCount = 0;
 let connectedUsers = {}; // Track connected users per room
 let messages = {}; // Track messages per room
+let roomOwners = {}; // Track room owners
 
 io.use((socket, next) => {
   cookieParser()(socket.request, socket.request.res, (err) => {
@@ -59,13 +60,18 @@ io.on("connection", (socket) => {
   userCount++;
   console.log(`User ${userCount} Connected`, socket.id);
 
-  socket.on("join-room", (room) => {
+  socket.on("join-room", ({ room, username }) => {
     socket.join(room);
     console.log(`User ${userCount} joined room ${room}`);
 
     // Add user to connected users list for the room
     connectedUsers[room] = connectedUsers[room] || [];
-    connectedUsers[room].push({ id: socket.id, username: `User ${userCount}` });
+    connectedUsers[room].push({ id: socket.id, username: username || `User ${userCount}` });
+
+    // Set room owner if not set already
+    if (!roomOwners[room]) {
+      roomOwners[room] = username || `User ${userCount}`;
+    }
 
     // Send all previous messages of the room to the joining user
     if (messages[room]) {
@@ -74,7 +80,8 @@ io.on("connection", (socket) => {
       }
     }
 
-    io.to(room).emit('user-connected', `User ${userCount} has joined the chat`, room);
+    io.to(room).emit('user-connected', `${username || `User ${userCount}`} has joined the chat`, room);
+    io.to(room).emit('room-joined', { room, owner: roomOwners[room] }); // Send room name and owner to all users in the room
   });
 
   socket.on("message", ({ room, message }) => {
@@ -83,7 +90,7 @@ io.on("connection", (socket) => {
       const user = connectedUsers[room].find(u => u.id === socket.id);
       if (user) {
         const messageWithUser = `${user.username}: ${message}`;
-        socket.to(room).emit("message received", messageWithUser);
+        io.to(room).emit("message received", messageWithUser);
         messages[room] = messages[room] || [];
         messages[room].push(messageWithUser);
       }
