@@ -6,7 +6,6 @@ import "./app.css"
 const App = () => {
   const [socket, setSocket] = useState(null);
   const [currentUser, setCurrentUser] = useState(""); // Track current user ID
-
   const [message, setMessage] = useState('');
   const [roomName, setRoomName] = useState('');
   const [allMessages, setAllMessages] = useState([]);
@@ -14,6 +13,7 @@ const App = () => {
   const [roomJoined, setRoomJoined] = useState(false);
   const [currentRoom, setCurrentRoom] = useState('');
   const [roomOwner, setRoomOwner] = useState('');
+  const [roomKey, setRoomKey] = useState(''); // State to store room key
   const messagesEndRef = useRef(null);
 
   const handleSubmit = (e) => {
@@ -77,9 +77,10 @@ const App = () => {
       scrollToBottom();
     });
 
-    newSocket.on('room-joined', ({ room, owner }) => {
+    newSocket.on('room-joined', ({ room, owner, key }) => {
       setCurrentRoom(room);
       setRoomOwner(owner);
+      setRoomKey(key); // Set room key state
     });
 
     return () => {
@@ -153,48 +154,84 @@ const App = () => {
             </form>
           ) : (
             <form onSubmit={joinRoomHandler}>
-              <Grid container spacing={2}>
-                <Grid item xs={6}>
-                  <TextField
-                    id="roomName"
-                    value={roomName}
-                    onChange={(e) => setRoomName(e.target.value)}
-                    label="Join New Room"
-                    variant="outlined"
-                    style={{ width: "100%" }}
-                    sx={{
-                      backgroundColor: "white",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "white",
-                        },
-                      },
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={6}>
-                  <TextField
-                    id="username"
-                    label="Join as (e.g. John)"
-                    variant="outlined"
-                    style={{ width: "100%" }}
-                    sx={{
-                      backgroundColor: "white",
-                      "& .MuiOutlinedInput-root": {
-                        "& fieldset": {
-                          borderColor: "white",
-                        },
-                      },
-                    }}
-                  />
-                </Grid>
-                <Grid item xs={12}>
-                  <Button type="submit" variant="contained" color="primary" fullWidth style={{background:"#181818"}}>
-                    Join
-                  </Button>
-                </Grid>
-              </Grid>
-            </form>
+  <Grid container spacing={2}>
+    <Grid item xs={5.5}>
+      <TextField
+        id="roomName"
+        value={roomName}
+        onChange={(e) => setRoomName(e.target.value)}
+        label="Join New Room"
+        variant="outlined"
+        style={{ width: "100%" }}
+        sx={{
+          backgroundColor: "white",
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": {
+              borderColor: "white",
+            },
+          },
+        }}
+      />
+    </Grid>
+    <Grid item xs={1} style={{ textAlign: "center", marginTop: "17px" }}>
+      <Typography variant="body1" style={{ color: "orange", fontSize: "16px", fontWeight: "bold" }}>
+        or
+      </Typography>
+    </Grid>
+    <Grid item xs={5.5}>
+      <TextField
+        id="roomKey"
+        label="Enter Room ID"
+        variant="outlined"
+        style={{ width: "100%" }}
+        sx={{
+          backgroundColor: "white",
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": {
+              borderColor: "white",
+            },
+          },
+        }}
+      />
+    </Grid>
+    <Grid item xs={12}>
+      <TextField
+        id="username"
+        label="Join as (e.g. John, Max, Anonymous) etc "
+        variant="outlined"
+        style={{ width: "100%" }}
+        sx={{
+          backgroundColor: "white",
+          "& .MuiOutlinedInput-root": {
+            "& fieldset": {
+              borderColor: "white",
+            },
+          },
+        }}
+      />
+    </Grid>
+    <Grid item xs={12}>
+    <Button 
+  type="submit" 
+  variant="contained" 
+  fullWidth 
+  sx={{
+    backgroundColor: "#181818",
+    '&:hover': {
+      backgroundColor: "#181818", // Keep the background color same on hover
+      '& .MuiButton-label': {
+        color: "orange" // Change the text color to orange on hover
+      }
+    },
+  }}
+>
+  Join
+</Button>
+    </Grid>
+  </Grid>
+</form>
+
+          
           )}
         </Grid>
         <Grid item xs={6}>
@@ -205,6 +242,7 @@ const App = () => {
                   <span style={{ color: "orange" }}>ROOM:</span> {currentRoom}
                 </Typography>
                 <Typography variant="subtitle1" gutterBottom style={{ color: "grey", marginTop: "-5px", fontSize:"12px" , fontStyle: "italic"}}>
+                  <span style={{ color: "grey", fontSize: "12px", marginLeft: "5px" }}> Room Key: {roomKey}</span> {/* Display room key */}<br/>
                   created by {roomOwner} ({new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' })})
                   <hr />
                 </Typography>

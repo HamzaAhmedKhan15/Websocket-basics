@@ -4,6 +4,7 @@ import { createServer } from 'http';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import cookieParser from 'cookie-parser';
+import { randomBytes } from 'crypto'; // Import randomBytes for generating random keys
 
 const port = 5000;
 const secretKey = 'tommarvoloriddle';
@@ -41,6 +42,7 @@ let userCount = 0;
 let connectedUsers = {}; // Track connected users per room
 let messages = {}; // Track messages per room
 let roomOwners = {}; // Track room owners
+let roomKeys = {}; // Track room keys
 
 io.use((socket, next) => {
   cookieParser()(socket.request, socket.request.res, (err) => {
@@ -73,6 +75,12 @@ io.on("connection", (socket) => {
       roomOwners[room] = username || `User ${userCount}`;
     }
 
+    // Generate and set room key if not set already
+    if (!roomKeys[room]) {
+      const key = generateRoomKey();
+      roomKeys[room] = key;
+    }
+
     // Send all previous messages of the room to the joining user
     if (messages[room]) {
       for (const msg of messages[room]) {
@@ -81,7 +89,7 @@ io.on("connection", (socket) => {
     }
 
     io.to(room).emit('user-connected', `${username || `User ${userCount}`} has joined the chat`, room);
-    io.to(room).emit('room-joined', { room, owner: roomOwners[room] }); // Send room name and owner to all users in the room
+    io.to(room).emit('room-joined', { room, owner: roomOwners[room], key: roomKeys[room] }); // Send room name, owner, and key to all users in the room
   });
 
   socket.on("message", ({ room, message }) => {
@@ -113,3 +121,8 @@ io.on("connection", (socket) => {
 server.listen(port, () => {
   console.log(`Server is running at port ${port}`);
 });
+
+// Function to generate a random 5-character key
+function generateRoomKey() {
+  return randomBytes(3).toString('hex').toUpperCase(); // Generating a 3-byte random key and converting it to uppercase hex string
+}
