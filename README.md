@@ -13,8 +13,9 @@ Features of the Chatroom:
 
 1) Users can create multiple Chatrooms at the same time.
 2) Real-time converations with timestamps on each message set by user.
-3) Each ChatRoom has it own unique key.
+3) Each ChatRoom has its own unique key.
 4) Multiple users can join the same Chatroom.
 5) Users can see past messages after joining the ChatRoom.
+6) User can rechange their names and again join the same ChatRoom.
 
    
