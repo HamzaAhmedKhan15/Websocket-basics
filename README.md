@@ -9,7 +9,7 @@ How to use Socket' Chatrooms:
 3) If new user wants to join your ChatRoom, he/she has to enter the Room key/name to enter the ChatRoom.
 4) Once the ChatRoom is succesfully created User(s) can send messages in the chatroom.
 
-Features pf the Chatroom:
+Features of the Chatroom:
 
 1) Users can create multiple Chatrooms at the same time.
 2) Real-time converations with timestamps on each message set by user.
